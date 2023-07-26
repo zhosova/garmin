@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from dash import Dash
 from dash import html
@@ -7,62 +6,88 @@ import plotly.express as px
 from dash import Output, Input
 
 df = pd.read_csv(r"C:\Users\zuzka\OneDrive\Plocha\garmin\Activities.csv")
+df[["Čas"]] = df[["Čas"]].apply(pd.to_datetime)
 
 garmin2 = Dash(__name__)
 
-garmin2.layout = html.Div(
+garmin2.layout = html.Header(
     [
         html.H1("Garmin dashboard"),
         html.P("1st attempt."),
         html.Div(
             [
-                html.Label("Typ aktivity: "),
-                dcc.Dropdown(
-                    id="Typ_aktivitky",
-                    options=[ {"label": data,"value": data} for data in df["Typ aktivity"].unique() ],
+            html.Label("Typ aktivity: "),
+            dcc.Dropdown(
+                id="Typ_aktivity",
+                options=[{"label": data, "value": data
+                    } for data in df["Typ aktivity"].unique()
+                ],
+                    #className="dropdown"
+                    
                 ),
+                html.Label("Vzdálenost: "),
+                dcc.Dropdown(
+                    id="Vzdalenost",
+                    options=[{"label": data, "value": data
+                        } for data in range(int(df.Vzdálenost.min()), int(df.Vzdálenost.max())+1)],
+                    #className="dropdown"
+                )
             ]
 
         ),
-        html.Div(dcc.Graph(id="graf")),
+        html.Div(
+            dcc.Graph(id="graf"), #className="chart"
+            ),
         html.Div(
             [
-            html.Label("Max tep "),
+            html.Label("Tep: "),
             dcc.Slider(
-                id="max_tep",
-                min=df["Maximální ST"].min(),
-                max=df["Maximální ST"].max(),
+                id="avg_tep",
+                min=df["Průměrný ST"].min(),
+                max=df["Průměrný ST"].max(),
                 step=1,
-                value=df["Maximální ST"].min(),
-                marks={rok: str(rok) for rok in range(df["Maximální ST"].min(), df["Maximální ST"].max()+1)}
+                value=df["Průměrný ST"].median(),
+                marks={tep: str(tep) for tep in range(df["Průměrný ST"].min(), df["Průměrný ST"].max()+1)}
             )
             ])
-    ]
-)
+])
+    
 
 @garmin2.callback(
         Output("graf", "figure"),
-        Input("Typ_aktivitky", "value"),
-        Input("max_tep", "value")
+        Input("Typ_aktivity", "value"),
+        Input("avg_tep", "value"),
+        Input("Vzdalenost", "value")
              
 )
-def aktualizuj_graf(Typ_aktivitky, max_tep):
+def aktualizuj_graf(Typ_aktivity, Vzdalenost, avg_tep):
+    
+    vyfiltrovany_df = df
+
+    
+    if Typ_aktivity:
+        vyfiltrovany_df = vyfiltrovany_df[vyfiltrovany_df["Typ aktivity"] == Typ_aktivity]
+    
+    #if Vzdalenost:
+     #   vyfiltrovany_df = vyfiltrovany_df[vyfiltrovany_df["Vzdálenost"] == Vzdalenost]
     
     data_grafu = px.scatter( #figure
-        df,
-        x="Vzdálenost", #hruby domaci produkt
+        vyfiltrovany_df,
+        x="Datum", #hruby domaci produkt
         y="Čas",
-        size="Průměrný ST",
+        color="Maximální teplota",
+        size="Vzdálenost"
+        
                
     ) 
 
     data_grafu.update_layout(
-        plot_bgcolor="#011833",
-        paper_bgcolor="#011833",
-        font_color="#7FDBFF"
+        plot_bgcolor="#B7CEEC",
+        paper_bgcolor="#045F5F",
+        font_color="#B7CEEC"
     )
 
     return data_grafu
 
 if __name__ == "__main__":
-    garmin2.run_server(debug=True, port=9050)
+    garmin2.run_server(debug=True, port=9052)
